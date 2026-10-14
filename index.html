@@ -8,26 +8,33 @@
   <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/USDZExporter.js"></script>
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #060a12;
       color: #f1f5f9;
-      padding: 1.5rem 1rem;
+      padding: 1.25rem 1rem 2rem;
+      overflow-x: hidden;
     }
-    .container { max-width: 540px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+    body.ar-lock-scroll {
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+    .container { max-width: 540px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.25rem; }
     .eyebrow { font-size: 0.75rem; letter-spacing: 0.14em; color: #00f0ff; font-weight: 700; margin: 0 0 0.4rem; }
-    h1 { margin: 0 0 0.5rem; font-size: 1.85rem; }
-    .subtitle { margin: 0; color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }
-    .viewer-card { background: #0d1424; border: 1px solid rgba(0,240,255,0.25); border-radius: 16px; padding: 1.25rem; }
-    .top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-    .status-badge { display: inline-flex; gap: 0.5rem; align-items: center; font-size: 0.75rem; background: #111827; padding: 0.35rem 0.75rem; border-radius: 999px; }
+    h1 { margin: 0 0 0.5rem; font-size: 1.8rem; }
+    .subtitle { margin: 0; color: #94a3b8; font-size: 0.94rem; line-height: 1.5; }
+    .viewer-card { background: #0d1424; border: 1px solid rgba(0,240,255,0.25); border-radius: 16px; padding: 1.15rem; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem; }
+    .status-badge { display: inline-flex; gap: 0.5rem; align-items: center; font-size: 0.74rem; background: #111827; padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid #1e293b; }
     .status-badge strong { color: #00f0ff; }
-    .ar-actions { display: flex; gap: 0.5rem; }
-    .ar-btn { background: #00f0ff; color: #050811; border: none; padding: 0.45rem 1rem; border-radius: 999px; font-weight: 700; font-size: 0.75rem; cursor: pointer; }
-    .quicklook-btn { background: #1e293b; color: #cbd5e1; text-decoration: none; padding: 0.45rem 0.85rem; border-radius: 999px; font-size: 0.75rem; }
-    
+    .ar-actions { display: flex; gap: 0.45rem; }
+    .ar-btn { background: #00f0ff; color: #050811; border: none; padding: 0.48rem 1rem; border-radius: 999px; font-weight: 700; font-size: 0.78rem; cursor: pointer; box-shadow: 0 0 16px rgba(0,240,255,0.35); }
+    .quicklook-btn { background: #1e293b; color: #cbd5e1; text-decoration: none; padding: 0.48rem 0.85rem; border-radius: 999px; font-size: 0.75rem; border: 1px solid #334155; }
+
     #canvas-wrapper {
       position: relative;
       width: 100%;
@@ -39,15 +46,16 @@
       margin-bottom: 1rem;
       touch-action: none;
     }
+    /* Fullscreen True Camera Superimpose Mode */
     #canvas-wrapper.ar-fullscreen-active {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100dvh;
-      z-index: 999;
-      border-radius: 0;
-      background: transparent !important;
-      margin: 0;
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100dvh !important;
+      z-index: 9999 !important;
+      border-radius: 0 !important;
+      background: #000 !important;
+      margin: 0 !important;
     }
     #ar-camera-video {
       position: absolute;
@@ -59,64 +67,108 @@
       z-index: 1;
       pointer-events: none;
     }
-    #canvas-wrapper.ar-fullscreen-active #ar-camera-video { display: block; }
+    #canvas-wrapper.ar-fullscreen-active #ar-camera-video {
+      display: block !important;
+    }
     #canvas-wrapper canvas {
-      position: relative;
+      position: absolute;
+      inset: 0;
       z-index: 2;
       width: 100% !important;
       height: 100% !important;
       display: block;
       background: transparent !important;
     }
-    .ar-reticle-hint {
+
+    .ar-top-hud {
       position: absolute;
-      top: 20px;
+      top: max(16px, env(safe-area-inset-top));
       left: 16px;
+      right: 16px;
       z-index: 30;
-      background: rgba(15, 23, 42, 0.82);
-      border: 1px solid rgba(0, 240, 255, 0.4);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      pointer-events: none;
+    }
+    .ar-reticle-hint {
+      background: rgba(10, 15, 28, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.45);
       color: #00f0ff;
       padding: 0.45rem 0.85rem;
       border-radius: 999px;
       font-size: 0.75rem;
       font-weight: 600;
       backdrop-filter: blur(8px);
-      pointer-events: none;
     }
-    .controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 0.75rem; }
-    .btn { background: #1e293b; color: #f1f5f9; border: 1px solid #334155; padding: 0.7rem; border-radius: 10px; font-size: 0.88rem; cursor: pointer; font-weight: 600; }
-    .btn.primary { background: rgba(0,240,255,0.18); border-color: #00f0ff; color: #00f0ff; font-weight: 700; }
-    .action-status { font-size: 0.8rem; color: #00f0ff; font-weight: 600; margin: 0; }
-    .hidden { display: none !important; }
     .exit-ar-btn {
-      position: absolute;
-      top: 20px;
-      right: 16px;
-      z-index: 30;
-      background: rgba(15,23,42,0.88);
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.9);
       color: #fff;
       border: 1px solid #475569;
-      padding: 0.5rem 1.1rem;
+      padding: 0.5rem 1.05rem;
       border-radius: 999px;
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 0.78rem;
       cursor: pointer;
       backdrop-filter: blur(8px);
     }
+
+    /* Bottom AR HUD Bar */
     .live-ar-hud {
       position: absolute;
-      bottom: 28px;
+      bottom: max(24px, env(safe-area-inset-bottom));
       left: 16px;
       right: 16px;
       z-index: 30;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.75rem;
-      background: rgba(15,23,42,0.88);
-      border: 1px solid rgba(0,240,255,0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      background: rgba(10, 15, 28, 0.88);
+      border: 1px solid rgba(0, 240, 255, 0.4);
       padding: 0.85rem;
-      border-radius: 16px;
+      border-radius: 18px;
       backdrop-filter: blur(12px);
     }
+    .ar-place-bar {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .ar-action-pair {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.65rem;
+    }
+    .controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 0.75rem; }
+    .btn {
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid #334155;
+      padding: 0.75rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 700;
+      text-align: center;
+      user-select: none;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn.primary {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: #00f0ff;
+      color: #00f0ff;
+    }
+    .btn.place-btn {
+      flex: 1;
+      background: #00f0ff;
+      color: #041019;
+      border: none;
+      padding: 0.6rem;
+      font-size: 0.82rem;
+    }
+    .action-status { font-size: 0.8rem; color: #00f0ff; font-weight: 600; margin: 0; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -125,7 +177,7 @@
       <p class="eyebrow">XR SPORTS ARENA • MOBILE EXHIBIT</p>
       <h1>AR Football Striker Exhibit</h1>
       <p class="subtitle">
-        An interactive 3D football striker and match ball built for mobile WebAR. Rotate the player here, trigger Jump and Kick actions, or launch Live AR to superimpose and control the player directly on your floor.
+        Point your camera at the floor in Live AR to superimpose the striker in your space, then use the Jump and Kick buttons.
       </p>
     </header>
 
@@ -145,13 +197,22 @@
       </div>
 
       <div id="canvas-wrapper">
-        <video id="ar-camera-video" playsinline muted autoplay></video>
-        <div id="ar-reticle-hint" class="ar-reticle-hint hidden">Tap floor to place • Drag to rotate</div>
-        <button id="exit-live-ar-btn" class="exit-ar-btn hidden" type="button">Exit AR</button>
+        <video id="ar-camera-video" playsinline webkit-playsinline muted autoplay></video>
 
+        <div id="ar-top-hud" class="ar-top-hud hidden">
+          <div id="ar-reticle-hint" class="ar-reticle-hint">Aim at floor & tap Place Here</div>
+          <button id="exit-live-ar-btn" class="exit-ar-btn" type="button">Exit AR</button>
+        </div>
+
+        <!-- AR Screen Controls: Lock to Floor + Jump & Kick -->
         <div id="live-ar-hud" class="live-ar-hud hidden">
-          <button id="ar-hud-jump-btn" class="btn primary" type="button">Jump</button>
-          <button id="ar-hud-kick-btn" class="btn primary" type="button">Kick</button>
+          <div class="ar-place-bar">
+            <button id="ar-lock-floor-btn" class="btn place-btn" type="button">Place on Floor Here</button>
+          </div>
+          <div class="ar-action-pair">
+            <button id="ar-hud-jump-btn" class="btn primary" type="button">Jump</button>
+            <button id="ar-hud-kick-btn" class="btn primary" type="button">Kick</button>
+          </div>
         </div>
       </div>
 
@@ -170,11 +231,13 @@
     (function () {
       const canvasWrapper = document.getElementById('canvas-wrapper');
       const arVideo = document.getElementById('ar-camera-video');
+      const arTopHud = document.getElementById('ar-top-hud');
       const arReticleHint = document.getElementById('ar-reticle-hint');
 
       const launchLiveArBtn = document.getElementById('launch-live-ar-btn');
       const exitLiveArBtn = document.getElementById('exit-live-ar-btn');
       const liveArHud = document.getElementById('live-ar-hud');
+      const arLockFloorBtn = document.getElementById('ar-lock-floor-btn');
       const arQuickLookLink = document.getElementById('ar-quicklook-link');
 
       const jumpBtn = document.getElementById('jump-btn');
@@ -190,31 +253,42 @@
 
       let isAutoRotating = true;
       let isLiveArActive = false;
+      let isFloorLocked = false;
       let cameraStream = null;
       let compiledUsdzBlobUrl = null;
 
-      const gyroState = {
-        baseAlpha: null,
-        baseBeta: null,
-        alphaOffset: 0,
-        betaOffset: 0
-      };
+      // Full 3D Quaternion Device Orientation Tracker for Real World Superimposing
+      const deviceQuat = new THREE.Quaternion();
+      const hasGyroData = { active: false, alpha: 0, beta: 70, gamma: 0 };
+      const zee = new THREE.Vector3(0, 0, 1);
+      const euler = new THREE.Euler();
+      const q0 = new THREE.Quaternion();
+      const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -PI/2 around X
 
+      function setObjectQuaternion(quaternion, alpha, beta, gamma, orient) {
+        euler.set(beta, alpha, -gamma, 'YXZ');
+        quaternion.setFromEuler(euler);
+        quaternion.multiply(q1);
+        quaternion.multiply(q0.setFromAxisAngle(zee, -orient));
+      }
+
+      // Jump Animation State
       const jumpAnim = {
         active: false,
         startTime: 0,
         duration: 950
       };
 
+      // Kick Animation State (2000ms = 2 seconds hold before respawn)
       const kickAnim = {
         active: false,
         startTime: 0,
         strikeTime: 300,
         flightDuration: 550,
-        waitDuration: 2000 // 2 seconds hold before respawn
+        waitDuration: 2000
       };
 
-      // Placed directly in front of the right kicking foot
+      // Football positioned directly in front of the right kicking foot (x = -0.11, z = 0.22)
       const BALL_HOME_POS = new THREE.Vector3(-0.11, 0.22, 0.22);
       const BALL_TARGET_POS = new THREE.Vector3(-0.11, 0.22, 3.65);
 
@@ -222,7 +296,7 @@
       const initHeight = canvasWrapper.clientHeight || 390;
 
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(42, initWidth / initHeight, 0.1, 100);
+      const camera = new THREE.PerspectiveCamera(52, initWidth / initHeight, 0.05, 100);
 
       const renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -231,6 +305,8 @@
         powerPreference: 'high-performance'
       });
       renderer.setClearColor(0x000000, 0);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.setSize(initWidth, initHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       canvasWrapper.appendChild(renderer.domElement);
@@ -238,119 +314,48 @@
       const orbitState = {
         theta: 0.35,
         phi: 1.18,
-        radius: 5.0,
-        target: new THREE.Vector3(0, 0.95, 0),
+        radius: 4.8,
+        target: new THREE.Vector3(0, 0.9, 0),
         isDragging: false,
         dragMoved: false,
         lastX: 0,
         lastY: 0,
-        pinchDist: 0
+        pinchDist: 0,
+        modelScale: 1.0,
+        modelYaw: 0
       };
 
-      function updateCameraFromOrbit() {
-        const effectiveTheta = orbitState.theta + (isLiveArActive ? gyroState.alphaOffset : 0);
-        const effectivePhi = Math.max(0.25, Math.min(Math.PI / 2 + 0.05, orbitState.phi + (isLiveArActive ? gyroState.betaOffset : 0)));
+      function updatePreviewCamera() {
+        orbitState.phi = Math.max(0.25, Math.min(Math.PI / 2 + 0.05, orbitState.phi));
         orbitState.radius = Math.max(2.0, Math.min(12.0, orbitState.radius));
 
-        const sinPhiRadius = Math.sin(effectivePhi) * orbitState.radius;
-        camera.position.x = orbitState.target.x + sinPhiRadius * Math.sin(effectiveTheta);
-        camera.position.y = orbitState.target.y + Math.cos(effectivePhi) * orbitState.radius;
-        camera.position.z = orbitState.target.z + sinPhiRadius * Math.cos(effectiveTheta);
+        const sinPhiRadius = Math.sin(orbitState.phi) * orbitState.radius;
+        camera.position.x = orbitState.target.x + sinPhiRadius * Math.sin(orbitState.theta);
+        camera.position.y = orbitState.target.y + Math.cos(orbitState.phi) * orbitState.radius;
+        camera.position.z = orbitState.target.z + sinPhiRadius * Math.cos(orbitState.theta);
         camera.lookAt(orbitState.target);
       }
-      updateCameraFromOrbit();
+      updatePreviewCamera();
 
-      const raycaster = new THREE.Raycaster();
-      const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-      const tapPoint = new THREE.Vector3();
-
-      const domElem = renderer.domElement;
-
-      domElem.addEventListener('pointerdown', (e) => {
-        orbitState.isDragging = true;
-        orbitState.dragMoved = false;
-        orbitState.lastX = e.clientX;
-        orbitState.lastY = e.clientY;
-      });
-
-      window.addEventListener('pointermove', (e) => {
-        if (!orbitState.isDragging) return;
-        const dx = e.clientX - orbitState.lastX;
-        const dy = e.clientY - orbitState.lastY;
-        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) orbitState.dragMoved = true;
-        orbitState.lastX = e.clientX;
-        orbitState.lastY = e.clientY;
-        orbitState.theta -= dx * 0.008;
-        orbitState.phi -= dy * 0.008;
-        updateCameraFromOrbit();
-      });
-
-      window.addEventListener('pointerup', (e) => {
-        if (orbitState.isDragging && !orbitState.dragMoved && isLiveArActive) {
-          const rect = domElem.getBoundingClientRect();
-          const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-          const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-          raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
-          if (raycaster.ray.intersectPlane(floorPlane, tapPoint)) {
-            const clampedX = Math.max(-1.8, Math.min(1.8, tapPoint.x));
-            const clampedZ = Math.max(-1.8, Math.min(1.8, tapPoint.z));
-            exhibitGroup.position.set(clampedX, 0, clampedZ);
-            if (arReticleHint) arReticleHint.textContent = 'Placed on floor • Tap Jump or Kick';
-          }
-        }
-        orbitState.isDragging = false;
-      });
-
-      domElem.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        orbitState.radius += e.deltaY * 0.004;
-        updateCameraFromOrbit();
-      }, { passive: false });
-
-      domElem.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-          orbitState.isDragging = false;
-          const dx = e.touches[0].clientX - e.touches[1].clientX;
-          const dy = e.touches[0].clientY - e.touches[1].clientY;
-          orbitState.pinchDist = Math.hypot(dx, dy);
-        }
-      }, { passive: true });
-
-      domElem.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
-          const dx = e.touches[0].clientX - e.touches[1].clientX;
-          const dy = e.touches[0].clientY - e.touches[1].clientY;
-          const dist = Math.hypot(dx, dy);
-          if (orbitState.pinchDist > 0) {
-            const delta = orbitState.pinchDist - dist;
-            orbitState.radius += delta * 0.015;
-            updateCameraFromOrbit();
-          }
-          orbitState.pinchDist = dist;
-        }
-      }, { passive: true });
-
-      window.addEventListener('deviceorientation', (e) => {
-        if (!isLiveArActive || e.alpha === null || e.beta === null) return;
-        if (gyroState.baseAlpha === null) {
-          gyroState.baseAlpha = e.alpha;
-          gyroState.baseBeta = e.beta;
-        }
-        const dAlpha = ((e.alpha - gyroState.baseAlpha + 540) % 360) - 180;
-        const dBeta = e.beta - gyroState.baseBeta;
-        gyroState.alphaOffset = THREE.MathUtils.degToRad(dAlpha * 0.65);
-        gyroState.betaOffset = THREE.MathUtils.degToRad(-dBeta * 0.45);
-        updateCameraFromOrbit();
-      });
-
+      // Lighting + Real AR Floor Shadow Light
       const ambientLight = new THREE.AmbientLight(0xffffff, 1.15);
       scene.add(ambientLight);
 
-      const keyLight = new THREE.DirectionalLight(0xe0f2fe, 2.0);
-      keyLight.position.set(3, 6, 4);
+      const keyLight = new THREE.DirectionalLight(0xfffbeb, 2.1);
+      keyLight.position.set(2.5, 6, 3.5);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.width = 1024;
+      keyLight.shadow.mapSize.height = 1024;
+      keyLight.shadow.camera.near = 0.5;
+      keyLight.shadow.camera.far = 20;
+      const d = 4;
+      keyLight.shadow.camera.left = -d;
+      keyLight.shadow.camera.right = d;
+      keyLight.shadow.camera.top = d;
+      keyLight.shadow.camera.bottom = -d;
       scene.add(keyLight);
 
-      const rimLight = new THREE.DirectionalLight(0x00f0ff, 1.3);
+      const rimLight = new THREE.DirectionalLight(0x00f0ff, 1.2);
       rimLight.position.set(-4, 4, -3);
       scene.add(rimLight);
 
@@ -366,8 +371,38 @@
         return geom;
       }
 
+      // Root Exhibit Group
       const exhibitGroup = new THREE.Group();
       scene.add(exhibitGroup);
+
+      // Transparent AR Floor Shadow-Catcher Plane (Makes character look grounded on real floor)
+      const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.42 });
+      const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), shadowPlaneMat);
+      shadowPlane.rotation.x = -Math.PI / 2;
+      shadowPlane.position.y = 0.002;
+      shadowPlane.receiveShadow = true;
+      exhibitGroup.add(shadowPlane);
+
+      // AR Floor Target Reticle (Shown while aiming at floor in AR)
+      const reticleGroup = new THREE.Group();
+      reticleGroup.visible = false;
+      scene.add(reticleGroup);
+
+      const reticleOuter = new THREE.Mesh(
+        new THREE.RingGeometry(0.42, 0.48, 48),
+        new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide })
+      );
+      reticleOuter.rotation.x = -Math.PI / 2;
+      reticleOuter.position.y = 0.01;
+      reticleGroup.add(reticleOuter);
+
+      const reticleInner = new THREE.Mesh(
+        new THREE.RingGeometry(0.08, 0.12, 32),
+        new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide })
+      );
+      reticleInner.rotation.x = -Math.PI / 2;
+      reticleInner.position.y = 0.01;
+      reticleGroup.add(reticleInner);
 
       // 1. Arena Base Platform
       const platformGroup = new THREE.Group();
@@ -380,6 +415,7 @@
       });
       const baseDisc = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.22, 0.08, 48), baseMat);
       baseDisc.position.y = 0.04;
+      baseDisc.receiveShadow = true;
       platformGroup.add(baseDisc);
 
       const rimMat = new THREE.MeshStandardMaterial({
@@ -428,6 +464,7 @@
       strikerRoot.add(hipsGroup);
 
       const pelvisMesh = new THREE.Mesh(createBakedBox(0.38, 0.16, 0.22), shortsMat);
+      pelvisMesh.castShadow = true;
       hipsGroup.add(pelvisMesh);
 
       const torsoGroup = new THREE.Group();
@@ -435,6 +472,7 @@
       hipsGroup.add(torsoGroup);
 
       const chestMesh = new THREE.Mesh(createBakedBox(0.44, 0.48, 0.24, 0, 0.24, 0), kitMat);
+      chestMesh.castShadow = true;
       torsoGroup.add(chestMesh);
 
       const emblemMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.02, 24), trimMat);
@@ -452,6 +490,7 @@
 
       const headSkull = new THREE.Mesh(createBakedSphere(0.16, 1, 1.08, 1), skinMat);
       headSkull.position.y = 0.21;
+      headSkull.castShadow = true;
       headGroup.add(headSkull);
 
       const hairCap = new THREE.Mesh(createBakedSphere(0.166, 1.02, 0.85, 1.03), hairMat);
@@ -470,10 +509,12 @@
         torsoGroup.add(shoulderPivot);
 
         const shoulderPad = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 16), kitMat);
+        shoulderPad.castShadow = true;
         shoulderPivot.add(shoulderPad);
 
         const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.046, 0.36, 16), skinMat);
         upperArm.position.y = -0.2;
+        upperArm.castShadow = true;
         shoulderPivot.add(upperArm);
 
         const wristband = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.045, 16), trimMat);
@@ -498,10 +539,12 @@
 
         const thighShort = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.074, 0.22, 16), shortsMat);
         thighShort.position.y = -0.11;
+        thighShort.castShadow = true;
         hipPivot.add(thighShort);
 
         const thighSkin = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.18, 16), skinMat);
         thighSkin.position.y = -0.27;
+        thighSkin.castShadow = true;
         hipPivot.add(thighSkin);
 
         const kneePivot = new THREE.Group();
@@ -510,6 +553,7 @@
 
         const shinSock = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.32, 16), sockMat);
         shinSock.position.y = -0.16;
+        shinSock.castShadow = true;
         kneePivot.add(shinSock);
 
         const shinGuard = new THREE.Mesh(createBakedBox(0.055, 0.16, 0.03), trimMat);
@@ -517,6 +561,7 @@
         kneePivot.add(shinGuard);
 
         const bootMesh = new THREE.Mesh(createBakedBox(0.11, 0.08, 0.22, 0, -0.34, 0.04), bootMat);
+        bootMesh.castShadow = true;
         kneePivot.add(bootMesh);
 
         const bootSole = new THREE.Mesh(createBakedBox(0.114, 0.02, 0.226, 0, -0.375, 0.04), trimMat);
@@ -528,7 +573,7 @@
       const leftLeg = createLeg(true);
       const rightLeg = createLeg(false);
 
-      // 3. Football
+      // 3. Football (Aligned right in front of the right kicking foot)
       const footballGroup = new THREE.Group();
       footballGroup.position.copy(BALL_HOME_POS);
       exhibitGroup.add(footballGroup);
@@ -539,6 +584,7 @@
         metalness: 0.1
       });
       const ballSphere = new THREE.Mesh(new THREE.SphereGeometry(0.14, 28, 28), ballCoreMat);
+      ballSphere.castShadow = true;
       footballGroup.add(ballSphere);
 
       const panelMat = new THREE.MeshStandardMaterial({
@@ -576,6 +622,123 @@
       }
       resetStrikerPose();
 
+      // Raycaster for Floor Locking
+      const raycaster = new THREE.Raycaster();
+      const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const hitPoint = new THREE.Vector3();
+
+      // Place model at current floor reticle position
+      function lockModelToFloorReticle() {
+        exhibitGroup.position.copy(reticleGroup.position);
+        // Face the camera horizontally
+        const camPos = camera.position;
+        const angleToCam = Math.atan2(camPos.x - exhibitGroup.position.x, camPos.z - exhibitGroup.position.z);
+        orbitState.modelYaw = angleToCam;
+        exhibitGroup.rotation.y = orbitState.modelYaw;
+        isFloorLocked = true;
+        reticleGroup.visible = false;
+        if (arReticleHint) arReticleHint.textContent = 'Locked to floor • Drag to rotate • Pinch to scale';
+        if (arLockFloorBtn) arLockFloorBtn.textContent = 'Move / Re-place on Floor';
+      }
+
+      if (arLockFloorBtn) {
+        arLockFloorBtn.addEventListener('click', () => {
+          if (!isFloorLocked) {
+            lockModelToFloorReticle();
+          } else {
+            // Unlock so user can aim reticle at a new floor spot
+            isFloorLocked = false;
+            reticleGroup.visible = true;
+            if (arReticleHint) arReticleHint.textContent = 'Aim at floor & tap Place Here';
+            arLockFloorBtn.textContent = 'Place on Floor Here';
+          }
+        });
+      }
+
+      // Pointer & Touch Controls
+      const domElem = renderer.domElement;
+
+      domElem.addEventListener('pointerdown', (e) => {
+        orbitState.isDragging = true;
+        orbitState.dragMoved = false;
+        orbitState.lastX = e.clientX;
+        orbitState.lastY = e.clientY;
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!orbitState.isDragging) return;
+        const dx = e.clientX - orbitState.lastX;
+        const dy = e.clientY - orbitState.lastY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) orbitState.dragMoved = true;
+        orbitState.lastX = e.clientX;
+        orbitState.lastY = e.clientY;
+
+        if (isLiveArActive) {
+          // Rotate character on floor when dragging in AR
+          orbitState.modelYaw += dx * 0.012;
+          exhibitGroup.rotation.y = orbitState.modelYaw;
+        } else {
+          orbitState.theta -= dx * 0.008;
+          orbitState.phi -= dy * 0.008;
+          updatePreviewCamera();
+        }
+      });
+
+      window.addEventListener('pointerup', (e) => {
+        if (orbitState.isDragging && !orbitState.dragMoved && isLiveArActive) {
+          // Tapping directly on the floor in AR places the character at that floor point
+          const rect = domElem.getBoundingClientRect();
+          const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
+          if (raycaster.ray.intersectPlane(floorPlane, hitPoint)) {
+            if (hitPoint.length() < 14) {
+              reticleGroup.position.copy(hitPoint);
+              lockModelToFloorReticle();
+            }
+          }
+        }
+        orbitState.isDragging = false;
+      });
+
+      domElem.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          orbitState.isDragging = false;
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          orbitState.pinchDist = Math.hypot(dx, dy);
+        }
+      }, { passive: true });
+
+      domElem.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          if (orbitState.pinchDist > 0) {
+            const delta = dist - orbitState.pinchDist;
+            if (isLiveArActive) {
+              orbitState.modelScale = Math.max(0.35, Math.min(2.2, orbitState.modelScale + delta * 0.004));
+              exhibitGroup.scale.setScalar(orbitState.modelScale);
+            } else {
+              orbitState.radius -= delta * 0.015;
+              updatePreviewCamera();
+            }
+          }
+          orbitState.pinchDist = dist;
+        }
+      }, { passive: true });
+
+      // DeviceOrientation Listener for True 3D World-Locked AR Camera
+      window.addEventListener('deviceorientation', (e) => {
+        if (e.alpha === null || e.beta === null || e.gamma === null) return;
+        hasGyroData.active = true;
+        hasGyroData.alpha = e.alpha;
+        hasGyroData.beta = e.beta;
+        hasGyroData.gamma = e.gamma;
+      });
+
+      // Jump & Kick Triggers
       function triggerJump() {
         if (jumpAnim.active) return;
         jumpAnim.active = true;
@@ -608,30 +771,28 @@
       function resetView() {
         orbitState.theta = 0.35;
         orbitState.phi = 1.18;
-        orbitState.radius = 5.0;
-        orbitState.target.set(0, 0.95, 0);
-        gyroState.baseAlpha = null;
-        gyroState.alphaOffset = 0;
-        gyroState.betaOffset = 0;
-        updateCameraFromOrbit();
+        orbitState.radius = 4.8;
+        orbitState.target.set(0, 0.9, 0);
+        orbitState.modelScale = 1.0;
+        orbitState.modelYaw = 0;
         exhibitGroup.position.set(0, 0, 0);
+        exhibitGroup.rotation.set(0, 0, 0);
         exhibitGroup.scale.set(1, 1, 1);
+        updatePreviewCamera();
         if (actionStatus) actionStatus.textContent = 'CAMERA RESET';
       }
 
       if (resetCameraBtn) resetCameraBtn.addEventListener('click', resetView);
 
+      // Start Live Camera AR with World-Locked Floor Superimposition
       async function startLiveCameraAR() {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
           try {
             await DeviceOrientationEvent.requestPermission();
           } catch (e) {
-            console.warn('Gyroscope permission declined:', e);
+            console.warn('Gyro permission notice:', e);
           }
         }
-        gyroState.baseAlpha = null;
-        gyroState.alphaOffset = 0;
-        gyroState.betaOffset = 0;
 
         try {
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -647,26 +808,43 @@
             await arVideo.play();
           }
         } catch (err) {
-          console.warn('Camera stream fallback:', err);
+          console.warn('Camera stream notice:', err);
         }
 
         isLiveArActive = true;
-        baseDisc.visible = false;
-        canvasWrapper.classList.add('ar-fullscreen-active');
-        if (arReticleHint) arReticleHint.classList.remove('hidden');
-        if (exitLiveArBtn) exitLiveArBtn.classList.remove('hidden');
-        if (liveArHud) liveArHud.classList.remove('hidden');
+        isFloorLocked = false;
+        document.body.classList.add('ar-lock-scroll');
 
-        orbitState.theta = 0.0;
-        orbitState.phi = 1.15;
-        orbitState.radius = 5.2;
-        updateCameraFromOrbit();
+        // Hide dark solid disc so character stands directly on real floor tiles with real ground shadow
+        baseDisc.visible = false;
+        outerRing.visible = true;
+        reticleGroup.visible = true;
+
+        canvasWrapper.classList.add('ar-fullscreen-active');
+        if (arTopHud) arTopHud.classList.remove('hidden');
+        if (liveArHud) liveArHud.classList.remove('hidden');
+        if (arLockFloorBtn) arLockFloorBtn.textContent = 'Place on Floor Here';
+        if (arReticleHint) arReticleHint.textContent = 'Aim at floor & tap Place on Floor Here';
+
+        // Set AR camera at standing eye height (1.35m above floor y=0)
+        camera.position.set(0, 1.35, 0);
+        camera.lookAt(0, 0, -2.6);
+
+        orbitState.modelScale = 0.72;
+        exhibitGroup.scale.setScalar(orbitState.modelScale);
+        exhibitGroup.position.set(0, 0, -2.6);
+        reticleGroup.position.set(0, 0, -2.6);
+
         handleResize();
       }
 
       function stopLiveCameraAR() {
         isLiveArActive = false;
+        isFloorLocked = false;
+        document.body.classList.remove('ar-lock-scroll');
         baseDisc.visible = true;
+        reticleGroup.visible = false;
+
         if (cameraStream) {
           cameraStream.getTracks().forEach(track => track.stop());
           cameraStream = null;
@@ -674,8 +852,7 @@
         if (arVideo) arVideo.srcObject = null;
 
         canvasWrapper.classList.remove('ar-fullscreen-active');
-        if (arReticleHint) arReticleHint.classList.add('hidden');
-        if (exitLiveArBtn) exitLiveArBtn.classList.add('hidden');
+        if (arTopHud) arTopHud.classList.add('hidden');
         if (liveArHud) liveArHud.classList.add('hidden');
         resetView();
         handleResize();
@@ -684,14 +861,29 @@
       if (launchLiveArBtn) launchLiveArBtn.addEventListener('click', startLiveCameraAR);
       if (exitLiveArBtn) exitLiveArBtn.addEventListener('click', stopLiveCameraAR);
 
+      // Compile updated striker-unit.usdz with centered football
       async function compileUsdzModel() {
         try {
           if (window.THREE && window.THREE.USDZExporter) {
+            const prevDiscVis = baseDisc.visible;
+            baseDisc.visible = true;
+
             const exportClone = exhibitGroup.clone(true);
             exportClone.position.set(0, 0, 0);
             exportClone.rotation.set(0, 0, 0);
             exportClone.scale.set(1, 1, 1);
             exportClone.updateMatrixWorld(true);
+
+            baseDisc.visible = prevDiscVis;
+
+            // Remove shadow-catcher plane from USDZ export
+            const toRemove = [];
+            exportClone.traverse((node) => {
+              if (node.material && node.material.isShadowMaterial) {
+                toRemove.push(node);
+              }
+            });
+            toRemove.forEach((n) => n.parent && n.parent.remove(n));
 
             const SCALE_FACTOR = 0.24;
             exportClone.traverse((node) => {
@@ -723,8 +915,8 @@
       compileUsdzModel();
 
       function handleResize() {
-        const w = canvasWrapper.clientWidth || window.innerWidth || 480;
-        const h = canvasWrapper.clientHeight || 390;
+        const w = isLiveArActive ? window.innerWidth : (canvasWrapper.clientWidth || 480);
+        const h = isLiveArActive ? window.innerHeight : (canvasWrapper.clientHeight || 390);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
@@ -732,14 +924,46 @@
       window.addEventListener('resize', handleResize);
       setTimeout(handleResize, 60);
 
+      // Main Animation Loop
       function animate(now) {
         requestAnimationFrame(animate);
 
-        if (isAutoRotating && !orbitState.isDragging && !isLiveArActive) {
-          orbitState.theta += 0.0055;
-          updateCameraFromOrbit();
+        if (isLiveArActive) {
+          // 1. Update Camera from 3D Gyroscope Quaternion so floor stays locked in real space
+          if (hasGyroData.active) {
+            const alpha = THREE.MathUtils.degToRad(hasGyroData.alpha);
+            const beta = THREE.MathUtils.degToRad(hasGyroData.beta);
+            const gamma = THREE.MathUtils.degToRad(hasGyroData.gamma);
+            const orient = window.screen && window.screen.orientation && window.screen.orientation.angle
+              ? THREE.MathUtils.degToRad(window.screen.orientation.angle)
+              : THREE.MathUtils.degToRad(window.orientation || 0);
+
+            setObjectQuaternion(deviceQuat, alpha, beta, gamma, orient);
+            camera.quaternion.slerp(deviceQuat, 0.25);
+          }
+
+          // 2. Raycast from screen center onto floor plane (y = 0) while aiming
+          if (!isFloorLocked) {
+            raycaster.setFromCamera({ x: 0, y: -0.15 }, camera);
+            if (raycaster.ray.intersectPlane(floorPlane, hitPoint)) {
+              const dist = hitPoint.length();
+              if (dist > 0.6 && dist < 9.0) {
+                reticleGroup.position.lerp(hitPoint, 0.25);
+                exhibitGroup.position.copy(reticleGroup.position);
+              }
+            }
+            const pulse = 1 + Math.sin(now * 0.008) * 0.08;
+            reticleOuter.scale.setScalar(pulse);
+          }
+        } else {
+          // Standard 3D Preview Orbit
+          if (isAutoRotating && !orbitState.isDragging) {
+            orbitState.theta += 0.0055;
+            updatePreviewCamera();
+          }
         }
 
+        // Idle Breathing
         if (!jumpAnim.active && !kickAnim.active) {
           const breath = Math.sin(now * 0.003) * 0.015;
           hipsGroup.position.y = 0.78 + breath;
@@ -747,7 +971,7 @@
           rightArm.rotation.x = -Math.sin(now * 0.003) * 0.06;
         }
 
-        // 1. JUMP ANIMATION
+        // JUMP ANIMATION
         if (jumpAnim.active) {
           const elapsed = now - jumpAnim.startTime;
           const t = Math.min(elapsed / jumpAnim.duration, 1);
@@ -796,7 +1020,7 @@
           }
         }
 
-        // 2. KICK & BALL FLIGHT + 2 SECOND WAIT BEFORE RESPAWN
+        // KICK ANIMATION + 2 SECOND HOLD BEFORE RESPAWN
         if (kickAnim.active) {
           const elapsed = now - kickAnim.startTime;
           const strikeEnd = kickAnim.strikeTime;
