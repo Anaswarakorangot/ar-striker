@@ -188,6 +188,17 @@ button:focus-visible {
   box-shadow: 0 4px 24px rgba(255, 183, 3, 0.35);
 }
 
+.action-btn {
+  background: #12253b;
+  border: 1px solid #23405d;
+  color: var(--ink);
+}
+
+.action-btn:hover {
+  background: #183350;
+  border-color: var(--cyan);
+}
+
 #arButton {
   position: absolute;
   left: 18px;
@@ -266,10 +277,7 @@ footer {
 
 @media (min-width: 620px) {
   .controls {
-    grid-template-columns: 2fr 1fr 1fr;
-  }
-  .primary {
-    grid-column: auto;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
