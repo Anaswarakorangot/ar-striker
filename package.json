@@ -1,0 +1,25 @@
+{
+  "name": "ar-striker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anaswarakorangot/ar-striker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Anaswarakorangot/ar-striker/issues"
+  },
+  "homepage": "https://github.com/Anaswarakorangot/ar-striker#readme",
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "three": "^0.186.1"
+  }
+}

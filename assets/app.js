@@ -1,139 +1,195 @@
 (() => {
-  const viewer = document.querySelector('#striker');
-  const activate = document.querySelector('#activate');
-  const rotate = document.querySelector('#rotate');
-  const reset = document.querySelector('#reset');
-  const jumpBtn = document.querySelector('#jumpBtn');
-  const kickBtn = document.querySelector('#kickBtn');
-  const status = document.querySelector('#strikerStatus');
-  const effect = document.querySelector('#effect');
-  const support = document.querySelector('#arSupport');
+  const viewer = document.querySelector('#characterViewer');
+  const actionBtns = document.querySelectorAll('.action-btn');
+  const arMiniBtns = document.querySelectorAll('.ar-mini-btn');
+  const statusEl = document.querySelector('#characterStatus');
+  const statusIndicator = document.querySelector('.status-indicator');
+  const effectToast = document.querySelector('#effectToast');
+  const arSupportText = document.querySelector('#arSupportText');
+  const arBadge = document.querySelector('#arBadge');
   const progress = document.querySelector('#progress');
-  const bar = progress ? progress.querySelector('span') : null;
+  const progressBar = progress ? progress.querySelector('span') : null;
 
-  let isStrikeMode = false;
-  let kickTimeout = null;
-  let kickHoldTimeout = null;
-  let jumpTimeout = null;
+  const btnSpeed = document.querySelector('#btnSpeed');
+  const btnRotate = document.querySelector('#btnRotate');
+  const btnReset = document.querySelector('#btnReset');
 
+  // Animation descriptions for feedback toasts
+  const animDetails = {
+    Run: {
+      label: 'RUNNING',
+      toast: '🏃 High-energy dynamic running stride active',
+      usdz: 'models/character_run.usdz'
+    },
+    Walk: {
+      label: 'WALKING',
+      toast: '🚶 Casual confident walking gait active',
+      usdz: 'models/character_walk.usdz'
+    },
+    Wave: {
+      label: 'WAVING',
+      toast: '👋 Friendly cheerful greeting wave active',
+      usdz: 'models/character_wave.usdz'
+    },
+    Still: {
+      label: 'STILL',
+      toast: '⏸️ Character standing still • Motion paused',
+      usdz: 'models/character_still.usdz'
+    }
+  };
+
+  let currentAnim = 'Still';
+  let speedModes = [
+    { label: '⏱️ Speed: 1.0x', val: 1.0 },
+    { label: '⚡ Speed: 1.5x', val: 1.5 },
+    { label: '🐢 Speed: 0.75x', val: 0.75 }
+  ];
+  let speedIdx = 0;
+
+  function showToast(message) {
+    if (!effectToast) return;
+    effectToast.textContent = message;
+    effectToast.classList.remove('flash');
+    requestAnimationFrame(() => effectToast.classList.add('flash'));
+  }
+
+  function setAnimation(animName) {
+    if (!animDetails[animName]) return;
+    currentAnim = animName;
+
+    if (viewer) {
+      if (animName === 'Still') {
+        try {
+          viewer.pause();
+        } catch (err) {
+          console.warn('Pause notice:', err);
+        }
+      } else {
+        try {
+          viewer.animationName = animName;
+          viewer.play();
+        } catch (err) {
+          console.warn('Animation switch notice:', err);
+        }
+      }
+
+      // Dynamically update USDZ for iOS Safari Quick Look so AR matches active animation
+      viewer.setAttribute('ios-src', animDetails[animName].usdz);
+    }
+
+    // Update active classes on main buttons
+    actionBtns.forEach((btn) => {
+      const isMatch = btn.getAttribute('data-anim') === animName;
+      btn.classList.toggle('active', isMatch);
+      btn.setAttribute('aria-pressed', String(isMatch));
+    });
+
+    // Update active classes on WebXR AR overlay buttons
+    arMiniBtns.forEach((btn) => {
+      const isMatch = btn.getAttribute('data-anim') === animName;
+      btn.classList.toggle('active', isMatch);
+    });
+
+    // Update status badge
+    if (statusEl) {
+      statusEl.textContent = animDetails[animName].label;
+    }
+
+    if (statusIndicator) {
+      statusIndicator.classList.toggle('still', animName === 'Still');
+    }
+
+    // Show feedback toast
+    showToast(animDetails[animName].toast);
+  }
+
+  // Bind clicks on main action buttons
+  actionBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const anim = btn.getAttribute('data-anim');
+      setAnimation(anim);
+    });
+  });
+
+  // Bind clicks on WebXR AR overlay buttons
+  arMiniBtns.forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const anim = btn.getAttribute('data-anim');
+      setAnimation(anim);
+    });
+  });
+
+  // Speed Toggle
+  if (btnSpeed && viewer) {
+    btnSpeed.addEventListener('click', () => {
+      speedIdx = (speedIdx + 1) % speedModes.length;
+      const current = speedModes[speedIdx];
+      btnSpeed.textContent = current.label;
+      viewer.timeScale = current.val;
+      showToast(`Playback speed set to ${current.val}x`);
+    });
+  }
+
+  // Auto-rotate Toggle
+  if (btnRotate && viewer) {
+    btnRotate.addEventListener('click', () => {
+      viewer.autoRotate = !viewer.autoRotate;
+      btnRotate.textContent = `🔄 Auto-rotate: ${viewer.autoRotate ? 'On' : 'Off'}`;
+      btnRotate.setAttribute('aria-pressed', String(viewer.autoRotate));
+    });
+  }
+
+  // Reset Camera View
+  if (btnReset && viewer) {
+    btnReset.addEventListener('click', () => {
+      viewer.cameraOrbit = '0deg 75deg 1.35m';
+      viewer.cameraTarget = '0m 0.28m 0m';
+      viewer.fieldOfView = '32deg';
+      if (typeof viewer.jumpCameraToGoal === 'function') {
+        viewer.jumpCameraToGoal();
+      }
+      showToast('🎯 Camera view reset to center');
+    });
+  }
+
+  // Model viewer event listeners
   if (viewer) {
     viewer.addEventListener('progress', (event) => {
-      if (!bar || !progress) return;
+      if (!progressBar || !progress) return;
       const percent = Math.round(event.detail.totalProgress * 100);
-      bar.style.width = `${percent}%`;
+      progressBar.style.width = `${percent}%`;
       progress.setAttribute('aria-valuenow', String(percent));
       progress.classList.toggle('hide', percent >= 100);
     });
 
     viewer.addEventListener('load', () => {
-      if (support) {
-        support.textContent = viewer.canActivateAR
-          ? 'AR ready • iPhone Safari uses Quick Look'
-          : 'AR is unavailable here; the interactive 3D preview still works.';
+      if (arSupportText) {
+        arSupportText.textContent = viewer.canActivateAR
+          ? 'AR ready • Tap "View Character in AR" for iPhone Quick Look or WebXR'
+          : 'Interactive 3D preview active • AR requires a compatible mobile browser';
+      }
+
+      if (arBadge) {
+        arBadge.textContent = viewer.canActivateAR ? 'AR READY' : '3D READY';
+      }
+
+      // Guarantee the character is STILL and not moving at start
+      try {
+        viewer.pause();
+      } catch (err) {
+        console.warn('Initial pause note:', err);
       }
     });
 
-    viewer.addEventListener('error', () => {
-      if (support) {
-        support.textContent = 'The 3D model could not load. Check your connection and refresh.';
+    viewer.addEventListener('error', (err) => {
+      console.error('Model loading error:', err);
+      if (arSupportText) {
+        arSupportText.textContent = '3D model loading failed. Please refresh the page.';
       }
     });
   }
 
-  function showEffect(text) {
-    if (!effect) return;
-    effect.textContent = text;
-    effect.classList.remove('flash');
-    requestAnimationFrame(() => effect.classList.add('flash'));
-  }
-
-  function triggerJump() {
-    if (!viewer) return;
-    clearTimeout(jumpTimeout);
-
-    try {
-      viewer.pause();
-      viewer.animationName = 'jump';
-      viewer.currentTime = 0;
-      viewer.play({ repetitions: 1 });
-    } catch (e) {
-      console.warn('Animation notice:', e);
-    }
-
-    if (status) status.textContent = 'JUMPING';
-    showEffect('🦘 LEAPING HEADER!');
-
-    jumpTimeout = setTimeout(() => {
-      if (status) status.textContent = isStrikeMode ? 'STRIKE MODE' : 'READY';
-    }, 1000);
-  }
-
-  function triggerKick() {
-    if (!viewer) return;
-    clearTimeout(kickTimeout);
-    clearTimeout(kickHoldTimeout);
-
-    try {
-      viewer.pause();
-      viewer.animationName = 'kick';
-      viewer.currentTime = 0;
-      viewer.play({ repetitions: 1 });
-    } catch (e) {
-      console.warn('Animation notice:', e);
-    }
-
-    if (status) status.textContent = 'BALL KICKED • FLYING';
-    showEffect('⚽ POWER STRIKE! BALL FLIES TO DISTANCE');
-
-    // After 850ms, the ball lands at distance and holds for 2 full seconds
-    kickHoldTimeout = setTimeout(() => {
-      if (status) status.textContent = 'BALL AT DISTANCE (RESPAWNING IN 2S)';
-    }, 850);
-
-    // After 2.9s - 3.1s, the ball respawns back to the striker's foot
-    kickTimeout = setTimeout(() => {
-      if (status) status.textContent = isStrikeMode ? 'STRIKE MODE' : 'READY';
-      showEffect('⚽ BALL RESPAWNED AT STRIKER\'S FOOT');
-    }, 3100);
-  }
-
-  if (jumpBtn) jumpBtn.addEventListener('click', triggerJump);
-  if (kickBtn) kickBtn.addEventListener('click', triggerKick);
-
-  if (activate && viewer) {
-    activate.addEventListener('click', () => {
-      isStrikeMode = !isStrikeMode;
-      viewer.src = isStrikeMode ? 'models/striker_strike.glb' : 'models/striker_ready.glb';
-      viewer.setAttribute('ios-src', isStrikeMode ? 'models/striker_strike.usdz' : 'models/striker_ready.usdz');
-      viewer.exposure = isStrikeMode ? 1.25 : 1;
-
-      if (status) {
-        status.textContent = isStrikeMode ? 'STRIKE MODE' : 'READY';
-        status.classList.toggle('powered', isStrikeMode);
-      }
-
-      activate.textContent = isStrikeMode ? '↺ Return to Ready Stance' : '⚡ Match Strike Mode';
-      activate.classList.toggle('strike-active', isStrikeMode);
-
-      showEffect(isStrikeMode ? '⚡ STRIKE CHARGED • 100% POWER' : '⚽ STRIKER READY');
-    });
-  }
-
-  if (rotate && viewer) {
-    rotate.addEventListener('click', () => {
-      viewer.autoRotate = !viewer.autoRotate;
-      rotate.textContent = `Auto-rotate: ${viewer.autoRotate ? 'On' : 'Off'}`;
-      rotate.setAttribute('aria-pressed', String(viewer.autoRotate));
-    });
-  }
-
-  if (reset && viewer) {
-    reset.addEventListener('click', () => {
-      viewer.cameraOrbit = '0deg 75deg 105%';
-      viewer.fieldOfView = '30deg';
-      if (typeof viewer.jumpCameraToGoal === 'function') {
-        viewer.jumpCameraToGoal();
-      }
-    });
-  }
+  // Initialize in still mode
+  setAnimation('Still');
 })();

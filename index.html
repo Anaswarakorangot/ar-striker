@@ -3,73 +3,133 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07111f">
-  <title>AR Football Striker Exhibit • iPhone AR Quick Look</title>
-  <meta name="description" content="Inspect the championship football striker in 3D, trigger strike mode, jump, and kick the football with 2s respawn, then superimpose the striker at real-world scale on your floor or table with iPhone Safari Quick Look.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Ccircle cx='32' cy='32' r='20' fill='%2300f0ff' fill-opacity='0.2' stroke='%2300f0ff' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='10' fill='%23ffffff'/%3E%3Cpath d='M32 16 L38 22 L36 30 L28 30 L26 22 Z' fill='%2307111f'/%3E%3Cpath d='M42 34 L36 40 L30 46 L34 48 L46 42 Z' fill='%2300f0ff'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#0a0f1d">
+  <title>AR Stylized 3D Character • Run, Walk & Wave Interactive Exhibit</title>
+  <meta name="description" content="Inspect the stylized 3D cartoon character in real-time 3D, switch seamlessly between Run, Walk, Wave, and Idle animations with interactive buttons, and place her at real-world scale in AR.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230a0f1d'/%3E%3Ccircle cx='32' cy='22' r='12' fill='%23f4bf35'/%3E%3Cpath d='M20 54 C20 40 44 40 44 54 Z' fill='%237c4e39'/%3E%3Ccircle cx='32' cy='22' r='9' fill='%23d19875'/%3E%3Cpath d='M23 20 C23 13 41 13 41 20 C41 26 38 28 32 28 C26 28 23 26 23 20 Z' fill='%23242023'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/style.css">
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
 </head>
 <body>
   <main>
     <header>
-      <p class="eyebrow">AR FOOTBALL ARENA • MOBILE EXHIBIT</p>
-      <h1>AR Striker Exhibit</h1>
-      <p class="intro">A championship football striker on an illuminated arena podium. Rotate the model here in 3D, activate match strike mode, jump, and kick the football with 2s respawn, then place the striker at real-world scale on your floor or table with iPhone Safari AR.</p>
+      <p class="eyebrow">INTERACTIVE 3D & AR EXHIBIT • REAL-TIME CONTROLS</p>
+      <h1>Pure 3D Character</h1>
+      <p class="intro">A stylized 3D character featuring custom clay-finish styling with brown jacket, yellow top, blue jeans, and sneakers. Use the on-screen action buttons to trigger running, walking, and waving in real time, or place her directly into your room with AR.</p>
     </header>
 
-    <section class="viewer-card" aria-label="Interactive AR football striker preview">
-      <model-viewer
-        id="striker"
-        src="models/striker_ready.glb"
-        ios-src="models/striker_ready.usdz"
-        alt="A championship football striker in athletic stance on arena podium"
-        camera-controls
-        auto-rotate
-        interaction-prompt="auto"
-        shadow-intensity="1.2"
-        exposure="1"
-        environment-image="neutral"
-        ar
-        ar-modes="quick-look webxr scene-viewer"
-        ar-scale="fixed"
-        xr-environment
-      >
-        <button id="arButton" slot="ar-button" class="primary">View in AR</button>
-        <div id="progress" class="progress" slot="progress-bar" role="progressbar" aria-label="Model loading progress" aria-valuemin="0" aria-valuemax="100">
-          <span></span>
+    <section class="viewer-card" aria-label="Interactive 3D character preview and AR launcher">
+      <div class="card-header">
+        <div class="state-pill">
+          <span class="status-indicator still"></span>
+          <span class="status-label">ACTIVE MOTION</span>
+          <strong id="characterStatus">STILL</strong>
         </div>
-      </model-viewer>
-
-      <div class="state-row">
-        <span>STRIKER MODE</span>
-        <strong id="strikerStatus">READY</strong>
+        <div class="badge-ar-ready" id="arBadge">AR READY</div>
       </div>
 
-      <div class="controls">
-        <button id="activate" class="primary">⚡ Match Strike Mode</button>
-        <button id="jumpBtn" class="action-btn" type="button">🦘 Jump</button>
-        <button id="kickBtn" class="action-btn" type="button">⚽ Kick Ball</button>
-        <button id="rotate" aria-pressed="true" type="button">Auto-rotate: On</button>
-        <button id="reset" type="button">Reset camera</button>
+      <div class="viewer-container">
+        <model-viewer
+          id="characterViewer"
+          src="models/character.glb"
+          ios-src="models/character_still.usdz"
+          alt="A stylized 3D woman character with brown jacket, yellow top, and blue jeans"
+          camera-controls
+          auto-rotate
+          interaction-prompt="auto"
+          shadow-intensity="1.3"
+          shadow-softness="0.75"
+          exposure="1.05"
+          environment-image="neutral"
+          camera-orbit="0deg 75deg 1.35m"
+          camera-target="0m 0.28m 0m"
+          field-of-view="32deg"
+          ar
+          ar-modes="webxr quick-look scene-viewer"
+          ar-scale="fixed"
+          xr-environment
+        >
+          <!-- WebXR DOM Overlay UI: buttons stay directly visible on screen inside WebXR AR! -->
+          <div id="arOverlay" slot="ar-overlay" class="ar-overlay-controls" aria-label="AR on-screen motion controls">
+            <div class="ar-overlay-pill">AR MOTION CONTROLS</div>
+            <div class="ar-overlay-btn-group">
+              <button type="button" class="ar-mini-btn" data-anim="Run">🏃 Run</button>
+              <button type="button" class="ar-mini-btn" data-anim="Walk">🚶 Walk</button>
+              <button type="button" class="ar-mini-btn" data-anim="Wave">👋 Wave</button>
+              <button type="button" class="ar-mini-btn active" data-anim="Still">⏸️ Still</button>
+            </div>
+          </div>
+
+          <button id="arButton" slot="ar-button" class="primary-ar" type="button">
+            <span class="ar-icon">📱</span> View Character in AR
+          </button>
+
+          <div id="progress" class="progress" slot="progress-bar" role="progressbar" aria-label="Model loading progress" aria-valuemin="0" aria-valuemax="100">
+            <span></span>
+          </div>
+        </model-viewer>
       </div>
 
-      <p id="effect" class="effect" aria-live="polite"></p>
-      <p id="arSupport" class="support">Checking AR support…</p>
+      <!-- Main Animation Action Buttons -->
+      <div class="action-section" aria-label="Character animation controls">
+        <div class="action-heading">
+          <span>MOTION ACTIONS</span>
+          <small class="action-hint">Tap any button to trigger motion</small>
+        </div>
+
+        <div class="action-grid">
+          <button id="btnRun" class="action-btn" data-anim="Run" type="button">
+            <span class="btn-emoji">🏃</span>
+            <span class="btn-title">Run</span>
+            <span class="btn-desc">Athletic Stride</span>
+          </button>
+
+          <button id="btnWalk" class="action-btn" data-anim="Walk" type="button">
+            <span class="btn-emoji">🚶</span>
+            <span class="btn-title">Walk</span>
+            <span class="btn-desc">Casual Motion</span>
+          </button>
+
+          <button id="btnWave" class="action-btn" data-anim="Wave" type="button">
+            <span class="btn-emoji">👋</span>
+            <span class="btn-title">Wave</span>
+            <span class="btn-desc">Friendly Greeting</span>
+          </button>
+
+          <button id="btnStill" class="action-btn active" data-anim="Still" type="button">
+            <span class="btn-emoji">⏸️</span>
+            <span class="btn-title">Still</span>
+            <span class="btn-desc">Stand / Pause</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Secondary Controls: Speed, Auto-rotate, Reset View -->
+      <div class="utility-controls">
+        <button id="btnSpeed" class="utility-btn" type="button">⏱️ Speed: 1.0x</button>
+        <button id="btnRotate" class="utility-btn" aria-pressed="true" type="button">🔄 Auto-rotate: On</button>
+        <button id="btnReset" class="utility-btn" type="button">🎯 Reset View</button>
+      </div>
+
+      <p id="effectToast" class="effect-toast" aria-live="polite">✨ Character is still • Tap Run, Walk, or Wave to start motion</p>
+      <p id="arSupportText" class="support-text">Checking AR device capabilities…</p>
     </section>
 
     <section class="instructions">
-      <h2>Place it in your space</h2>
+      <h2>How to View in Augmented Reality (AR)</h2>
       <ol>
-        <li>Tap <strong>View in AR</strong> in Safari on your iPhone.</li>
-        <li>Move your iPhone slowly to detect a table or floor surface.</li>
-        <li>Tap to place, then walk around the striker at real-world scale.</li>
+        <li>Select your preferred motion action above (<strong>Run</strong>, <strong>Walk</strong>, or <strong>Wave</strong>).</li>
+        <li>Tap <strong>View Character in AR</strong> on your mobile device (Safari on iPhone or Chrome on Android).</li>
+        <li>Point your device camera at the floor or table to detect a surface, then tap to place the character at real-world scale.</li>
+        <li>In WebXR AR, the floating action buttons remain directly on your camera screen so you can switch motions anytime while walking around the character!</li>
       </ol>
-      <p>Quick Look opens Apple's native ARKit surface tracking viewer. Page controls remain in Safari and do not continue inside Apple's AR viewer.</p>
+      <p>Supports Apple AR Quick Look on iOS Safari and WebXR Interactive AR with on-screen button overlay on modern mobile browsers.</p>
     </section>
   </main>
 
-  <footer>No camera frames sent to servers, no analytics, accounts, or advertisements. Built for iOS Safari Quick Look.</footer>
+  <footer>
+    <p>Pure Stylized 3D Character Experience • Real-time WebGL & Augmented Reality</p>
+  </footer>
 
   <script src="assets/app.js"></script>
 </body>
