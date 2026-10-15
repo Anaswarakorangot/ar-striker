@@ -39,30 +39,15 @@ function quatFromEuler(x, y, z) {
   return [q.x, q.y, q.z, q.w];
 }
 
+function quatFromAxisAngle(ax, ay, az, angle) {
+  const q = new THREE.Quaternion();
+  q.setFromAxisAngle(new THREE.Vector3(ax, ay, az), angle);
+  return [q.x, q.y, q.z, q.w];
+}
+
 function buildModel() {
   const root = new THREE.Group();
   root.name = 'root';
-
-  // 1. Materials matching reference photo:
-  const baseMat = new THREE.MeshStandardMaterial({
-    color: 0x0a101d,
-    roughness: 0.35,
-    metalness: 0.65
-  });
-
-  const rimNeonMat = new THREE.MeshStandardMaterial({
-    color: 0x00f0ff,
-    emissive: 0x00f0ff,
-    emissiveIntensity: 0.6,
-    roughness: 0.2
-  });
-
-  const innerRingMat = new THREE.MeshStandardMaterial({
-    color: 0x38bdf8,
-    emissive: 0x0284c7,
-    emissiveIntensity: 0.4,
-    roughness: 0.3
-  });
 
   // Character Materials:
   const skinMat = new THREE.MeshStandardMaterial({
@@ -170,33 +155,13 @@ function buildModel() {
     roughness: 0.85
   });
 
-  // Podium Base (y = 0.01)
-  const baseDisc = createCylinder(0.24, 0.25, 0.02, 48, baseMat);
-  baseDisc.position.y = 0.01;
-  baseDisc.name = 'podiumBase';
-  root.add(baseDisc);
-
-  const torusGeom = new THREE.TorusGeometry(0.242, 0.005, 16, 64);
-  torusGeom.rotateX(Math.PI / 2);
-  const outerRing = new THREE.Mesh(torusGeom, rimNeonMat);
-  outerRing.position.y = 0.02;
-  outerRing.name = 'outerRing';
-  root.add(outerRing);
-
-  const innerTorus = new THREE.TorusGeometry(0.14, 0.003, 12, 48);
-  innerTorus.rotateX(Math.PI / 2);
-  const innerRing = new THREE.Mesh(innerTorus, innerRingMat);
-  innerRing.position.y = 0.021;
-  innerRing.name = 'innerRing';
-  root.add(innerRing);
-
-  // Character Root (sitting directly on podium platform at y = 0.02)
+  // Pure Character Root (Positioned on the ground plane, ready to traverse across real-world floor in AR!)
   const character = new THREE.Group();
   character.name = 'character';
-  character.position.set(0, 0.02, 0);
+  character.position.set(0, 0, 0);
   root.add(character);
 
-  // Hips Root at y = 0.22 (height fits nicely on platform)
+  // Hips Root at y = 0.22
   const hips = new THREE.Group();
   hips.name = 'hips';
   hips.position.set(0, 0.22, 0);
@@ -207,7 +172,7 @@ function buildModel() {
   pelvis.name = 'pelvis';
   hips.add(pelvis);
 
-  // Belt & Buckle
+  // Belt & Silver Buckle
   const belt = createBox(0.09, 0.014, 0.057, beltMat);
   belt.position.y = 0.016;
   belt.name = 'belt';
@@ -320,35 +285,29 @@ function buildModel() {
     shoulder.position.set(side * 0.062, 0.095, 0);
     torso.add(shoulder);
 
-    // Shoulder cap (Brown jacket)
     const cap = createSphere(0.019, jacketMat, 1, 1, 1, 12);
     cap.name = isLeft ? 'leftShoulderCap' : 'rightShoulderCap';
     shoulder.add(cap);
 
-    // Upper sleeve (Brown jacket)
     const upperArm = createCylinder(0.016, 0.014, 0.065, 16, jacketMat);
     upperArm.position.y = -0.035;
     shoulder.add(upperArm);
 
-    // Rolled cuff
     const cuff = createTorus(0.016, 0.0045, 12, 20, cuffMat);
     cuff.rotation.x = Math.PI / 2;
     cuff.position.y = -0.068;
     cuff.name = isLeft ? 'leftCuff' : 'rightCuff';
     shoulder.add(cuff);
 
-    // Forearm Group (Articulated at elbow)
     const forearm = new THREE.Group();
     forearm.name = isLeft ? 'leftForearm' : 'rightForearm';
     forearm.position.set(0, -0.07, 0);
     shoulder.add(forearm);
 
-    // Bare caramel skin forearm
     const forearmSkin = createCylinder(0.012, 0.010, 0.065, 16, skinMat);
     forearmSkin.position.y = -0.032;
     forearm.add(forearmSkin);
 
-    // Hand
     const hand = createSphere(0.011, skinMat, 0.9, 1.2, 0.8, 12);
     hand.position.y = -0.068;
     forearm.add(hand);
@@ -367,43 +326,35 @@ function buildModel() {
     hip.position.set(side * 0.028, -0.015, 0);
     hips.add(hip);
 
-    // Thigh (Blue jeans)
     const thigh = createCylinder(0.021, 0.018, 0.11, 16, jeansMat);
     thigh.position.y = -0.055;
     hip.add(thigh);
 
-    // Knee Group
     const knee = new THREE.Group();
     knee.name = isLeft ? 'leftLegKnee' : 'rightLegKnee';
     knee.position.set(0, -0.11, 0);
     hip.add(knee);
 
-    // Calf (Blue jeans)
     const calf = createCylinder(0.018, 0.015, 0.10, 16, jeansMat);
     calf.position.y = -0.05;
     knee.add(calf);
 
-    // Rolled Jean Cuff
     const jeanCuff = createCylinder(0.0195, 0.0195, 0.018, 16, jeanCuffMat);
     jeanCuff.position.y = -0.095;
     knee.add(jeanCuff);
 
-    // White Sock
     const sock = createCylinder(0.014, 0.0135, 0.016, 14, sockMat);
     sock.position.y = -0.108;
     knee.add(sock);
 
-    // Sneaker Body
     const shoe = createBox(0.026, 0.022, 0.058, shoeMat);
     shoe.position.set(0, -0.12, 0.012);
     knee.add(shoe);
 
-    // White Sole
     const sole = createBox(0.028, 0.006, 0.062, soleMat);
     sole.position.set(0, -0.132, 0.012);
     knee.add(sole);
 
-    // White Lace bar
     const lace = createBox(0.016, 0.003, 0.016, laceMat);
     lace.position.set(0, -0.108, 0.014);
     knee.add(lace);
@@ -414,150 +365,258 @@ function buildModel() {
   const leftLeg = createLeg(true);
   const rightLeg = createLeg(false);
 
-  // ==========================================
-  // ANIMATION CLIPS (Proper 60fps timecodes)
-  // ==========================================
+  // =========================================================================
+  // ANIMATION CLIPS WITH REAL WORLD TRAVERSAL ("moving from place to place")
+  // =========================================================================
 
-  // 1. STILL CLIP (1.0s static hold)
+  // 1. STILL CLIP (1.0s motionless at center)
   const stillTimes = [0, 1.0];
-  const stillHipsPos = [0, 0.22, 0, 0, 0.22, 0];
-  const stillHipsQuat = [...quatFromEuler(0, 0, 0), ...quatFromEuler(0, 0, 0)];
-  const stillLeftArm = [...quatFromEuler(0.08, 0, 0.12), ...quatFromEuler(0.08, 0, 0.12)];
-  const stillRightArm = [...quatFromEuler(0.08, 0, -0.12), ...quatFromEuler(0.08, 0, -0.12)];
-  const stillLeftLeg = [...quatFromEuler(0, 0, 0.01), ...quatFromEuler(0, 0, 0.01)];
-  const stillRightLeg = [...quatFromEuler(0, 0, -0.01), ...quatFromEuler(0, 0, -0.01)];
+  const stillPos = [0, 0, 0, 0, 0, 0];
+  const stillQuat = [...quatFromEuler(0, 0, 0), ...quatFromEuler(0, 0, 0)];
 
   const stillClip = new THREE.AnimationClip('Still', 1.0, [
-    new THREE.VectorKeyframeTrack('hips.position', stillTimes, stillHipsPos),
-    new THREE.QuaternionKeyframeTrack('hips.quaternion', stillTimes, stillHipsQuat),
-    new THREE.QuaternionKeyframeTrack('leftArm.quaternion', stillTimes, stillLeftArm),
-    new THREE.QuaternionKeyframeTrack('rightArm.quaternion', stillTimes, stillRightArm),
-    new THREE.QuaternionKeyframeTrack('leftLegHip.quaternion', stillTimes, stillLeftLeg),
-    new THREE.QuaternionKeyframeTrack('rightLegHip.quaternion', stillTimes, stillRightLeg)
+    new THREE.VectorKeyframeTrack('character.position', stillTimes, stillPos),
+    new THREE.QuaternionKeyframeTrack('character.quaternion', stillTimes, stillQuat),
+    new THREE.VectorKeyframeTrack('hips.position', stillTimes, [0, 0.22, 0, 0, 0.22, 0]),
+    new THREE.QuaternionKeyframeTrack('leftArm.quaternion', stillTimes, [...quatFromEuler(0.08, 0, 0.12), ...quatFromEuler(0.08, 0, 0.12)]),
+    new THREE.QuaternionKeyframeTrack('rightArm.quaternion', stillTimes, [...quatFromEuler(0.08, 0, -0.12), ...quatFromEuler(0.08, 0, -0.12)]),
+    new THREE.QuaternionKeyframeTrack('leftLegHip.quaternion', stillTimes, [...quatFromEuler(0, 0, 0.01), ...quatFromEuler(0, 0, 0.01)]),
+    new THREE.QuaternionKeyframeTrack('rightLegHip.quaternion', stillTimes, [...quatFromEuler(0, 0, -0.01), ...quatFromEuler(0, 0, -0.01)])
   ]);
 
-  // 2. RUN CLIP (0.8s athletic run cycle matching reference image)
-  const runTimes = [0, 0.2, 0.4, 0.6, 0.8];
-  const runHipsPos = [
-    0, 0.22, 0,
-    0, 0.205, 0,
-    0, 0.22, 0,
-    0, 0.205, 0,
-    0, 0.22, 0
-  ];
-  const runLeftArm = [
-    ...quatFromEuler(-0.95, 0, 0.3),
-    ...quatFromEuler(-0.05, 0, 0.2),
-    ...quatFromEuler(0.75, 0, 0.15),
-    ...quatFromEuler(-0.05, 0, 0.2),
-    ...quatFromEuler(-0.95, 0, 0.3)
-  ];
-  const runLeftForearm = [
-    ...quatFromEuler(-0.85, 0, 0),
-    ...quatFromEuler(-0.55, 0, 0),
-    ...quatFromEuler(-0.35, 0, 0),
-    ...quatFromEuler(-0.6, 0, 0),
-    ...quatFromEuler(-0.85, 0, 0)
-  ];
-  const runRightArm = [
-    ...quatFromEuler(0.75, 0, -0.15),
-    ...quatFromEuler(-0.05, 0, -0.2),
-    ...quatFromEuler(-0.95, 0, -0.3),
-    ...quatFromEuler(-0.05, 0, -0.2),
-    ...quatFromEuler(0.75, 0, -0.15)
-  ];
-  const runRightForearm = [
-    ...quatFromEuler(-0.35, 0, 0),
-    ...quatFromEuler(-0.6, 0, 0),
-    ...quatFromEuler(-0.85, 0, 0),
-    ...quatFromEuler(-0.55, 0, 0),
-    ...quatFromEuler(-0.35, 0, 0)
+  // 2. RUN CLIP (3.2s full room traversal from Place A to Place B and back!)
+  // Traverses across 1.1 meters with smooth 360° path facing direction of motion:
+  const runTimes = [
+    0.0, 0.4, 0.8, 1.1, 1.3, 1.6, 1.8, 2.0, 2.4, 2.7, 2.9, 3.2
   ];
 
-  const runLeftLegHip = [
-    ...quatFromEuler(-0.65, 0, -0.04),
-    ...quatFromEuler(-0.1, 0, -0.02),
-    ...quatFromEuler(0.75, 0, 0.04),
-    ...quatFromEuler(0.18, 0, 0.02),
-    ...quatFromEuler(-0.65, 0, -0.04)
-  ];
-  const runLeftLegKnee = [
-    ...quatFromEuler(1.1, 0, 0),
-    ...quatFromEuler(0.4, 0, 0),
-    ...quatFromEuler(0.2, 0, 0),
-    ...quatFromEuler(0.7, 0, 0),
-    ...quatFromEuler(1.1, 0, 0)
-  ];
-
-  const runRightLegHip = [
-    ...quatFromEuler(0.75, 0, 0.04),
-    ...quatFromEuler(0.18, 0, 0.02),
-    ...quatFromEuler(-0.65, 0, -0.04),
-    ...quatFromEuler(-0.1, 0, -0.02),
-    ...quatFromEuler(0.75, 0, 0.04)
-  ];
-  const runRightLegKnee = [
-    ...quatFromEuler(0.2, 0, 0),
-    ...quatFromEuler(0.7, 0, 0),
-    ...quatFromEuler(1.1, 0, 0),
-    ...quatFromEuler(0.4, 0, 0),
-    ...quatFromEuler(0.2, 0, 0)
+  const runPositions = [
+    // Straight forward from z = -0.50 to z = +0.50
+    0.15, 0, -0.50,
+    0.15, 0, -0.15,
+    0.15, 0, +0.25,
+    0.15, 0, +0.50, // Reached Point B (+1.0m travel!)
+    // Smooth turn around
+    0.08, 0, +0.58,
+    -0.08, 0, +0.58,
+    // Straight back from z = +0.50 to z = -0.50
+    -0.15, 0, +0.50,
+    -0.15, 0, +0.15,
+    -0.15, 0, -0.25,
+    -0.15, 0, -0.50, // Reached Point A back!
+    // Smooth turn around to start
+    -0.08, 0, -0.58,
+    0.15, 0, -0.50
   ];
 
-  const runClip = new THREE.AnimationClip('Run', 0.8, [
-    new THREE.VectorKeyframeTrack('hips.position', runTimes, runHipsPos),
-    new THREE.QuaternionKeyframeTrack('leftArm.quaternion', runTimes, runLeftArm),
-    new THREE.QuaternionKeyframeTrack('leftForearm.quaternion', runTimes, runLeftForearm),
-    new THREE.QuaternionKeyframeTrack('rightArm.quaternion', runTimes, runRightArm),
-    new THREE.QuaternionKeyframeTrack('rightForearm.quaternion', runTimes, runRightForearm),
-    new THREE.QuaternionKeyframeTrack('leftLegHip.quaternion', runTimes, runLeftLegHip),
-    new THREE.QuaternionKeyframeTrack('leftLegKnee.quaternion', runTimes, runLeftLegKnee),
-    new THREE.QuaternionKeyframeTrack('rightLegHip.quaternion', runTimes, runRightLegHip),
-    new THREE.QuaternionKeyframeTrack('rightLegKnee.quaternion', runTimes, runRightLegKnee)
+  const runRotations = [
+    // Facing forward (+Z: 0 rad)
+    ...quatFromAxisAngle(0, 1, 0, 0),
+    ...quatFromAxisAngle(0, 1, 0, 0),
+    ...quatFromAxisAngle(0, 1, 0, 0),
+    ...quatFromAxisAngle(0, 1, 0, 0),
+    // Turning around (+Y)
+    ...quatFromAxisAngle(0, 1, 0, Math.PI * 0.45),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI * 0.9),
+    // Facing backward (-Z: PI rad)
+    ...quatFromAxisAngle(0, 1, 0, Math.PI),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI),
+    // Turning around (+Y) to face +Z again
+    ...quatFromAxisAngle(0, 1, 0, Math.PI * 1.5),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI * 2.0)
+  ];
+
+  // Continuous leg & arm running cycles (4 full cycles across 3.2s):
+  const runLimbTimes = [];
+  const runHipsPos = [];
+  const runLeftArm = [];
+  const runLeftForearm = [];
+  const runRightArm = [];
+  const runRightForearm = [];
+  const runLeftLegHip = [];
+  const runLeftLegKnee = [];
+  const runRightLegHip = [];
+  const runRightLegKnee = [];
+
+  const strideDur = 0.8;
+  const numStrides = 4;
+  for (let s = 0; s < numStrides; s++) {
+    const tBase = s * strideDur;
+    const subTimes = [0, 0.2, 0.4, 0.6];
+    subTimes.forEach((dt, step) => {
+      runLimbTimes.push(tBase + dt);
+
+      if (step === 0) {
+        runHipsPos.push(0, 0.22, 0);
+        runLeftArm.push(...quatFromEuler(-0.95, 0, 0.3));
+        runLeftForearm.push(...quatFromEuler(-0.85, 0, 0));
+        runRightArm.push(...quatFromEuler(0.75, 0, -0.15));
+        runRightForearm.push(...quatFromEuler(-0.35, 0, 0));
+        runLeftLegHip.push(...quatFromEuler(-0.65, 0, -0.04));
+        runLeftLegKnee.push(...quatFromEuler(1.1, 0, 0));
+        runRightLegHip.push(...quatFromEuler(0.75, 0, 0.04));
+        runRightLegKnee.push(...quatFromEuler(0.2, 0, 0));
+      } else if (step === 1) {
+        runHipsPos.push(0, 0.205, 0);
+        runLeftArm.push(...quatFromEuler(-0.05, 0, 0.2));
+        runLeftForearm.push(...quatFromEuler(-0.55, 0, 0));
+        runRightArm.push(...quatFromEuler(-0.05, 0, -0.2));
+        runRightForearm.push(...quatFromEuler(-0.6, 0, 0));
+        runLeftLegHip.push(...quatFromEuler(-0.1, 0, -0.02));
+        runLeftLegKnee.push(...quatFromEuler(0.4, 0, 0));
+        runRightLegHip.push(...quatFromEuler(0.18, 0, 0.02));
+        runRightLegKnee.push(...quatFromEuler(0.7, 0, 0));
+      } else if (step === 2) {
+        runHipsPos.push(0, 0.22, 0);
+        runLeftArm.push(...quatFromEuler(0.75, 0, 0.15));
+        runLeftForearm.push(...quatFromEuler(-0.35, 0, 0));
+        runRightArm.push(...quatFromEuler(-0.95, 0, -0.3));
+        runRightForearm.push(...quatFromEuler(-0.85, 0, 0));
+        runLeftLegHip.push(...quatFromEuler(0.75, 0, 0.04));
+        runLeftLegKnee.push(...quatFromEuler(0.2, 0, 0));
+        runRightLegHip.push(...quatFromEuler(-0.65, 0, -0.04));
+        runRightLegKnee.push(...quatFromEuler(1.1, 0, 0));
+      } else if (step === 3) {
+        runHipsPos.push(0, 0.205, 0);
+        runLeftArm.push(...quatFromEuler(-0.05, 0, 0.2));
+        runLeftForearm.push(...quatFromEuler(-0.6, 0, 0));
+        runRightArm.push(...quatFromEuler(-0.05, 0, -0.2));
+        runRightForearm.push(...quatFromEuler(-0.55, 0, 0));
+        runLeftLegHip.push(...quatFromEuler(0.18, 0, 0.02));
+        runLeftLegKnee.push(...quatFromEuler(0.7, 0, 0));
+        runRightLegHip.push(...quatFromEuler(-0.1, 0, -0.02));
+        runRightLegKnee.push(...quatFromEuler(0.4, 0, 0));
+      }
+    });
+  }
+  // End frame at 3.2s to close loop
+  runLimbTimes.push(3.2);
+  runHipsPos.push(0, 0.22, 0);
+  runLeftArm.push(...quatFromEuler(-0.95, 0, 0.3));
+  runLeftForearm.push(...quatFromEuler(-0.85, 0, 0));
+  runRightArm.push(...quatFromEuler(0.75, 0, -0.15));
+  runRightForearm.push(...quatFromEuler(-0.35, 0, 0));
+  runLeftLegHip.push(...quatFromEuler(-0.65, 0, -0.04));
+  runLeftLegKnee.push(...quatFromEuler(1.1, 0, 0));
+  runRightLegHip.push(...quatFromEuler(0.75, 0, 0.04));
+  runRightLegKnee.push(...quatFromEuler(0.2, 0, 0));
+
+  const runClip = new THREE.AnimationClip('Run', 3.2, [
+    new THREE.VectorKeyframeTrack('character.position', runTimes, runPositions),
+    new THREE.QuaternionKeyframeTrack('character.quaternion', runTimes, runRotations),
+    new THREE.VectorKeyframeTrack('hips.position', runLimbTimes, runHipsPos),
+    new THREE.QuaternionKeyframeTrack('leftArm.quaternion', runLimbTimes, runLeftArm),
+    new THREE.QuaternionKeyframeTrack('leftForearm.quaternion', runLimbTimes, runLeftForearm),
+    new THREE.QuaternionKeyframeTrack('rightArm.quaternion', runLimbTimes, runRightArm),
+    new THREE.QuaternionKeyframeTrack('rightForearm.quaternion', runLimbTimes, runRightForearm),
+    new THREE.QuaternionKeyframeTrack('leftLegHip.quaternion', runLimbTimes, runLeftLegHip),
+    new THREE.QuaternionKeyframeTrack('leftLegKnee.quaternion', runLimbTimes, runLeftLegKnee),
+    new THREE.QuaternionKeyframeTrack('rightLegHip.quaternion', runLimbTimes, runRightLegHip),
+    new THREE.QuaternionKeyframeTrack('rightLegKnee.quaternion', runLimbTimes, runRightLegKnee)
   ]);
 
-  // 3. WALK CLIP (1.2s fluid walk cycle)
-  const walkTimes = [0, 0.3, 0.6, 0.9, 1.2];
-  const walkHipsPos = [0, 0.22, 0, 0, 0.213, 0, 0, 0.22, 0, 0, 0.213, 0, 0, 0.22, 0];
-  const walkLeftArm = [
-    ...quatFromEuler(-0.45, 0, 0.15),
-    ...quatFromEuler(0.02, 0, 0.12),
-    ...quatFromEuler(0.42, 0, 0.1),
-    ...quatFromEuler(0.02, 0, 0.12),
-    ...quatFromEuler(-0.45, 0, 0.15)
-  ];
-  const walkRightArm = [
-    ...quatFromEuler(0.42, 0, -0.1),
-    ...quatFromEuler(0.02, 0, -0.12),
-    ...quatFromEuler(-0.45, 0, -0.15),
-    ...quatFromEuler(0.02, 0, -0.12),
-    ...quatFromEuler(0.42, 0, -0.1)
-  ];
-  const walkLeftLeg = [
-    ...quatFromEuler(-0.38, 0, -0.02),
-    ...quatFromEuler(0, 0, 0),
-    ...quatFromEuler(0.45, 0, 0.02),
-    ...quatFromEuler(0.12, 0, 0.01),
-    ...quatFromEuler(-0.38, 0, -0.02)
-  ];
-  const walkRightLeg = [
-    ...quatFromEuler(0.45, 0, 0.02),
-    ...quatFromEuler(0.12, 0, 0.01),
-    ...quatFromEuler(-0.38, 0, -0.02),
-    ...quatFromEuler(0, 0, 0),
-    ...quatFromEuler(0.45, 0, 0.02)
+  // 3. WALK CLIP (4.8s full room walk traversal from Place A to Place B and back!)
+  const walkTimes = [
+    0.0, 0.6, 1.2, 1.8, 2.1, 2.4, 2.7, 3.0, 3.6, 4.2, 4.5, 4.8
   ];
 
-  const walkClip = new THREE.AnimationClip('Walk', 1.2, [
-    new THREE.VectorKeyframeTrack('hips.position', walkTimes, walkHipsPos),
-    new THREE.QuaternionKeyframeTrack('leftArm.quaternion', walkTimes, walkLeftArm),
-    new THREE.QuaternionKeyframeTrack('rightArm.quaternion', walkTimes, walkRightArm),
-    new THREE.QuaternionKeyframeTrack('leftLegHip.quaternion', walkTimes, walkLeftLeg),
-    new THREE.QuaternionKeyframeTrack('rightLegHip.quaternion', walkTimes, walkRightLeg)
+  const walkPositions = [
+    0.12, 0, -0.40,
+    0.12, 0, -0.15,
+    0.12, 0, +0.15,
+    0.12, 0, +0.40, // Reached Point B
+    0.06, 0, +0.46,
+    -0.06, 0, +0.46,
+    -0.12, 0, +0.40,
+    -0.12, 0, +0.15,
+    -0.12, 0, -0.15,
+    -0.12, 0, -0.40, // Reached Point A back
+    -0.06, 0, -0.46,
+    0.12, 0, -0.40
+  ];
+
+  const walkRotations = [
+    ...quatFromAxisAngle(0, 1, 0, 0),
+    ...quatFromAxisAngle(0, 1, 0, 0),
+    ...quatFromAxisAngle(0, 1, 0, 0),
+    ...quatFromAxisAngle(0, 1, 0, 0),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI * 0.45),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI * 0.9),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI * 1.5),
+    ...quatFromAxisAngle(0, 1, 0, Math.PI * 2.0)
+  ];
+
+  const walkLimbTimes = [];
+  const walkHipsPos = [];
+  const walkLeftArm = [];
+  const walkRightArm = [];
+  const walkLeftLeg = [];
+  const walkRightLeg = [];
+
+  const walkStrideDur = 1.2;
+  const numWalkStrides = 4;
+  for (let s = 0; s < numWalkStrides; s++) {
+    const tBase = s * walkStrideDur;
+    const subTimes = [0, 0.3, 0.6, 0.9];
+    subTimes.forEach((dt, step) => {
+      walkLimbTimes.push(tBase + dt);
+
+      if (step === 0) {
+        walkHipsPos.push(0, 0.22, 0);
+        walkLeftArm.push(...quatFromEuler(-0.45, 0, 0.15));
+        walkRightArm.push(...quatFromEuler(0.42, 0, -0.1));
+        walkLeftLeg.push(...quatFromEuler(-0.38, 0, -0.02));
+        walkRightLeg.push(...quatFromEuler(0.45, 0, 0.02));
+      } else if (step === 1) {
+        walkHipsPos.push(0, 0.213, 0);
+        walkLeftArm.push(...quatFromEuler(0.02, 0, 0.12));
+        walkRightArm.push(...quatFromEuler(0.02, 0, -0.12));
+        walkLeftLeg.push(...quatFromEuler(0, 0, 0));
+        walkRightLeg.push(...quatFromEuler(0.12, 0, 0.01));
+      } else if (step === 2) {
+        walkHipsPos.push(0, 0.22, 0);
+        walkLeftArm.push(...quatFromEuler(0.42, 0, 0.1));
+        walkRightArm.push(...quatFromEuler(-0.45, 0, -0.15));
+        walkLeftLeg.push(...quatFromEuler(0.45, 0, 0.02));
+        walkRightLeg.push(...quatFromEuler(-0.38, 0, -0.02));
+      } else if (step === 3) {
+        walkHipsPos.push(0, 0.213, 0);
+        walkLeftArm.push(...quatFromEuler(0.02, 0, 0.12));
+        walkRightArm.push(...quatFromEuler(0.02, 0, -0.12));
+        walkLeftLeg.push(...quatFromEuler(0.12, 0, 0.01));
+        walkRightLeg.push(...quatFromEuler(0, 0, 0));
+      }
+    });
+  }
+  // End frame at 4.8s
+  walkLimbTimes.push(4.8);
+  walkHipsPos.push(0, 0.22, 0);
+  walkLeftArm.push(...quatFromEuler(-0.45, 0, 0.15));
+  walkRightArm.push(...quatFromEuler(0.42, 0, -0.1));
+  walkLeftLeg.push(...quatFromEuler(-0.38, 0, -0.02));
+  walkRightLeg.push(...quatFromEuler(0.45, 0, 0.02));
+
+  const walkClip = new THREE.AnimationClip('Walk', 4.8, [
+    new THREE.VectorKeyframeTrack('character.position', walkTimes, walkPositions),
+    new THREE.QuaternionKeyframeTrack('character.quaternion', walkTimes, walkRotations),
+    new THREE.VectorKeyframeTrack('hips.position', walkLimbTimes, walkHipsPos),
+    new THREE.QuaternionKeyframeTrack('leftArm.quaternion', walkLimbTimes, walkLeftArm),
+    new THREE.QuaternionKeyframeTrack('rightArm.quaternion', walkLimbTimes, walkRightArm),
+    new THREE.QuaternionKeyframeTrack('leftLegHip.quaternion', walkLimbTimes, walkLeftLeg),
+    new THREE.QuaternionKeyframeTrack('rightLegHip.quaternion', walkLimbTimes, walkRightLeg)
   ]);
 
-  // 4. WAVE CLIP (2.0s cheerful wave)
+  // 4. WAVE CLIP (2.0s cheerful wave at center position)
   const waveTimes = [0, 0.35, 0.65, 0.95, 1.25, 1.55, 1.85, 2.0];
+  const wavePos = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  ];
   const waveRightArm = [
     ...quatFromEuler(0.05, 0, -0.1),
     ...quatFromEuler(-1.25, 0, -0.45),
@@ -590,6 +649,7 @@ function buildModel() {
   ];
 
   const waveClip = new THREE.AnimationClip('Wave', 2.0, [
+    new THREE.VectorKeyframeTrack('character.position', waveTimes, wavePos),
     new THREE.QuaternionKeyframeTrack('rightArm.quaternion', waveTimes, waveRightArm),
     new THREE.QuaternionKeyframeTrack('rightForearm.quaternion', waveTimes, waveRightForearm),
     new THREE.QuaternionKeyframeTrack('headGroup.quaternion', waveTimes, waveHead)
@@ -611,28 +671,28 @@ async function exportAll() {
   const gltfExporter = new GLTFExporter();
   const usdzExporter = new USDZExporter();
 
-  console.log('Building clean optimized stylized character...');
+  console.log('Building pure stylized character with real-world traversal (moving from place to place)...');
   const char = buildModel();
   char.root.updateMatrixWorld(true);
 
   // 1. Export master GLB
-  console.log('Exporting character.glb...');
+  console.log('Exporting character.glb with root motion traversal...');
   const masterGlb = await gltfExporter.parseAsync(char.root, { binary: true, animations: char.clips });
   fs.writeFileSync(path.join(outDir, 'character.glb'), Buffer.from(masterGlb));
   console.log('Saved character.glb:', masterGlb.byteLength, 'bytes');
 
-  // 2. Export USDZ files (Always pass animations for proper timecodes in Quick Look!)
+  // 2. Export USDZ files for Quick Look with 60fps timecodes
   console.log('Exporting character_still.usdz...');
   const stillUsdz = await usdzExporter.parseAsync(char.root, { quickLookCompatible: true, animations: [char.stillClip] });
   fs.writeFileSync(path.join(outDir, 'character_still.usdz'), Buffer.from(stillUsdz));
   console.log('Saved character_still.usdz:', stillUsdz.byteLength, 'bytes');
 
-  console.log('Exporting character_run.usdz...');
+  console.log('Exporting character_run.usdz with traversal...');
   const runUsdz = await usdzExporter.parseAsync(char.root, { quickLookCompatible: true, animations: [char.runClip] });
   fs.writeFileSync(path.join(outDir, 'character_run.usdz'), Buffer.from(runUsdz));
   console.log('Saved character_run.usdz:', runUsdz.byteLength, 'bytes');
 
-  console.log('Exporting character_walk.usdz...');
+  console.log('Exporting character_walk.usdz with traversal...');
   const walkUsdz = await usdzExporter.parseAsync(char.root, { quickLookCompatible: true, animations: [char.walkClip] });
   fs.writeFileSync(path.join(outDir, 'character_walk.usdz'), Buffer.from(walkUsdz));
   console.log('Saved character_walk.usdz:', walkUsdz.byteLength, 'bytes');
@@ -642,11 +702,11 @@ async function exportAll() {
   fs.writeFileSync(path.join(outDir, 'character_wave.usdz'), Buffer.from(waveUsdz));
   console.log('Saved character_wave.usdz:', waveUsdz.byteLength, 'bytes');
 
-  // Default character.usdz is still mode
+  // Default character.usdz (still mode at start)
   fs.writeFileSync(path.join(outDir, 'character.usdz'), Buffer.from(stillUsdz));
   console.log('Saved default character.usdz (still mode)');
 
-  console.log('All models exported successfully!');
+  console.log('All character models and root motion animations exported successfully!');
 }
 
 exportAll().catch(err => {

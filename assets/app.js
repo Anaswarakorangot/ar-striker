@@ -11,13 +11,13 @@
 
   const animDetails = {
     Run: {
-      statusText: 'RUNNING',
-      toast: '🏃 Dynamic running stride active',
+      statusText: 'RUNNING (TRAVERSING)',
+      toast: '🏃 Running across the floor from place to place!',
       usdz: 'models/character_run.usdz'
     },
     Walk: {
-      statusText: 'WALKING',
-      toast: '🚶 Casual walking motion active',
+      statusText: 'WALKING (TRAVERSING)',
+      toast: '🚶 Walking across the floor from place to place!',
       usdz: 'models/character_walk.usdz'
     },
     Wave: {
